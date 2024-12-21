@@ -1,28 +1,33 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <pthread.h>
 
-void* hello(void* n) {
-    printf("jestem wątkiem #%ld\n", (long)n);
+int main(int argc, char *argv[]) {
+    pthread_t tid;
+    int rc;
+    long i, n;
+    void* hello(void*);
+
+    if (argc > 1) {
+        sscanf(argv[1], "%ld", &n);
+
+        for (i = 0; i < n; i++) {
+            printf("PID[%ld] tworzy wątek,...#%ld...\n", (long)getpid(), (i + 1));
+            rc = pthread_create(&tid, NULL, hello, (void *)(i + 1));
+            if (rc) {
+                perror("!.!.!...błąd pthread_create()...");
+                exit(rc);
+            }
+        }
+    } else {
+        printf("!.!.!... wywołanie powinno mieć postać: %s %s\n", argv[0], "<ilość_wątków>");
+    }
+
     pthread_exit(NULL);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc <= 1) {
-        printf("użycie: %s <liczba_wątków>\n", argv[0]);
-        return 1;
-    }
-
-    int n = atoi(argv[1]);
-    pthread_t threads[n];
-
-    for (int i = 0; i < n; i++) {
-        pthread_create(&threads[i], NULL, hello, (void*)(long)(i + 1));
-    }
-
-    for (int i = 0; i < n; i++) {
-        pthread_join(threads[i], NULL);
-    }
-
-    return 0;
+void* hello(void *n) {
+    printf("PID[%ld] ...jestem wątkiem #%ld! TID[%d]\n", (long)getpid(), (long)n, (int)pthread_self());
+    pthread_exit(NULL);
 }

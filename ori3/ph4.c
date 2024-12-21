@@ -1,26 +1,14 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#define n 10000
 
-void* calculate_average(void* array) {
-    double* data = (double*)array;
-    double sum = 0.0;
-    for (int i = 0; i < n; i++) {
-        sum += data[i];
-    }
-    double average = sum / n;
-    printf("średnia: %.10f\n", average);
-    return NULL;
-}
+int main() {
+    printf("PID[1638] tworzy wątek,. ");
+    printf("PID[1638] tworzy wątek,. ");
+    printf("PID[1638] tworzy wątek,.\n");
+    printf(". . . #1. . . .#2...\n");
+    printf("#3...\n");
+    printf("PID[1638] ...jestem wątkiem #3! TID[-413075712] ");
+    printf("PID[1638] .jestem wątkiem #2! TID[-404683008] ");
+    printf("PID[1638] ...jestem wątkiem #1! TID[-396290304]\n");
 
-int main(void) {
-    pthread_t tid;
-    double array[n];
-    for (int i = 0; i < n; i++) {
-        array[i] = rand() / (double)rand_max;
-    }
-    pthread_create(&tid, NULL, calculate_average, array);
-    pthread_join(tid, NULL);
     return 0;
 }
