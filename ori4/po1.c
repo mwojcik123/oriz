@@ -1,43 +1,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <semaphore.h>
+#include <pthread.h>
 
-int main(int argc, char **argv) {
-    sem_t *id;
-    pid_t child;
-    int status;
+int N = 0; // zmienna globalna, na której będą działać wątki
 
-    id = sem_open("szlaban", O_CREAT, S_IRUSR | S_IWUSR, 0);
+void *thread(void *arg) {
+    int n, i;
 
-    switch ((int)(child = fork())) {
-        case -1: // błąd podczas forka
-            perror("...fork()...");
-            exit(1);
-            break;
-
-        case 0: // kod dla potomka
-            printf("*** [%u] potomek czeka na semafor (%p)\n", (unsigned)getpid(), id);
-            sem_wait(id);
-            printf("*** [%u] potomek zakończył\n", (unsigned)getpid());
-            exit(0);
-
-        default: // kod dla procesu nadrzędnego
-            printf("*** [%u] ustawia semafor (%p)\n", (unsigned)getpid(), id);
-            sem_post(id);
-
-            if (!wait(&status)) {
-                perror("... wait()...");
-                exit(2);
-            } else {
-                printf("*** [%u] wygląda, że to wszystko\n", (unsigned)getpid());
-                sem_close(id);
-                sem_unlink("szlaban");
-            }
+    for (i = 0; i < 5; i++) {
+        n = N; // pobranie wartości zmiennej globalnej
+        n++;   // inkrementacja kopii lokalnej
+        printf("thread() [%lu]\n", (unsigned long)pthread_self());
+        fflush(stdout);
+        sleep(1); // czekanie 1 sekundy
+        N = n;    // zapisanie wartości do zmiennej globalnej
     }
 
+    pthread_exit(NULL);
+}
+
+int main(void) {
+    pthread_t tid;
+    int i;
+
+    // tworzenie wątku potomnego
+    if (pthread_create(&tid, NULL, thread, NULL)) {
+        perror("...pthread_create()...");
+        exit(1);
+    }
+
+    // działanie wątku głównego
+    for (i = 0; i < 5; i++) {
+        N--; // dekrementacja zmiennej globalnej
+        printf("main() [%lu]\n", (unsigned long)pthread_self());
+        fflush(stdout);
+        sleep(1); // czekanie 1 sekundy
+    }
+
+    // oczekiwanie na zakończenie wątku potomnego
+    if (pthread_join(tid, NULL)) {
+        perror("...pthread_join()...");
+        exit(2);
+    }
+
+    // wyświetlenie końcowego wyniku
+    printf("\nglobalnie N=%d, po wykonaniu 5+5 iteracji\n", N);
     return 0;
 }

@@ -14,21 +14,21 @@ int main(int argc, char **argv) {
     // otwarcie lub utworzenie semafora
     id = sem_open("szlaban", O_CREAT, S_IRUSR | S_IWUSR, 0);
 
-    // utworzenie procesu potomnego
+    // tworzenie procesu potomnego
     switch ((int)(child = fork())) {
         case -1: // błąd podczas forka
             perror("...fork()...");
             exit(1);
             break;
 
-        case 0: // kod procesu potomnego
+        case 0: // kod dla procesu potomnego
             printf("*** [%u] potomek czeka na semafor (%p)\n", 
                    (unsigned)getpid(), id);
             sem_wait(id);
             printf("*** [%u] potomek zakończył\n", (unsigned)getpid());
             exit(0);
 
-        default: // kod procesu nadrzędnego
+        default: // kod dla procesu nadrzędnego
             printf("*** [%u] ustawia semafor (%p)\n", 
                    (unsigned)getpid(), id);
             sem_post(id);
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
             } else {
                 printf("*** [%u] wygląda, że to wszystko\n", 
                        (unsigned)getpid());
-                sem_close(id);   // zamknięcie semafora
+                sem_close(id);        // zamknięcie semafora
                 sem_unlink("szlaban"); // usunięcie semafora
             }
     }

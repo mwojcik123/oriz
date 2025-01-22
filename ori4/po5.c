@@ -2,48 +2,60 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <semaphore.h>
 
-#define SHARE 1 // współdzielenie semafora między procesami (true)
+int go = 0; // zmienna sterująca wykonaniem (określa warunek)
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-sem_t id; // identyfikator używanego semafora
-int n;    // zmienna globalna, na której działają wątki
+void* producer(void* arg) {
+    printf("[%lu] producent: ???\n", (unsigned long)pthread_self());
+    sleep(1);
 
-void* thread(void *ptr) {
-    int i = *((int *)ptr); // pobranie numeru kolejnego wątku
-    printf("wątek %d: start\n", i);
+    pthread_mutex_lock(&mutex);
+    go = 1; // ustawienie warunku na true
+    pthread_cond_signal(&cond); // sygnał dla konsumenta
+    pthread_mutex_unlock(&mutex);
 
-    sem_wait(&id); // wątek wykonuje P() (wyłączność)
-    printf("wątek %d: krytyczna, start\n", i);
-    printf("wątek %d: n = %d\n", i, n);
-    printf("wątek %d: n++\n", i);
-    n++;
-    printf("wątek %d: n = %d\n", i, n);
-    printf("wątek %d: krytyczna, stop\n", i);
-
-    sem_post(&id); // wątek wykonuje V() (zwolnienie)
-    printf("wątek %d: stop\n", i);
-
-    pthread_exit(0);
+    pthread_exit(NULL);
 }
 
-int main(int argc, char **argv) {
-    int i[] = {1, 2}; // tablica numerów wątków
-    pthread_t first, second;
+void* consumer(void* arg) {
+    printf("[%lu] konsument: czeka...\n", (unsigned long)pthread_self());
 
-    // tworzenie semafora (POSIX, nienazwany)
-    sem_init(&id, !SHARE, 1);
+    pthread_mutex_lock(&mutex);
+    while (!go) { // czekanie na warunek
+        pthread_cond_wait(&cond, &mutex);
+    }
+    pthread_mutex_unlock(&mutex);
 
-    // uruchamianie wątków
-    pthread_create(&first, NULL, thread, (void *)(i + 0));
-    pthread_create(&second, NULL, thread, (void *)(i + 1));
+    printf("[%lu] konsument: kontynuacja\n", (unsigned long)pthread_self());
+    pthread_exit(NULL);
+}
 
-    /* tutaj pracują wątki */
-    pthread_join(first, NULL);
-    pthread_join(second, NULL);
+int main(int argc, char *argv[]) {
+    pthread_t cid, pid;
 
-    // wątki zakończyły działanie, usuwanie semafora
-    sem_destroy(&id);
+    // tworzenie wątku konsumenta
+    if (pthread_create(&cid, NULL, consumer, NULL)) {
+        perror("...pthread_create()...");
+        exit(1);
+    }
+
+    // tworzenie wątku producenta
+    if (pthread_create(&pid, NULL, producer, NULL)) {
+        perror("...pthread_create()...");
+        exit(1);
+    }
+
+    // czekanie na zakończenie wątków
+    if (pthread_join(cid, NULL)) {
+        perror("...pthread_join()...");
+        exit(1);
+    }
+    if (pthread_join(pid, NULL)) {
+        perror("...pthread_join()...");
+        exit(1);
+    }
 
     return 0;
 }
